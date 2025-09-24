@@ -5,3 +5,4 @@
 - [ ] includes bios mode but independent uefi mode
 - [ ] read up on bootloader stages
 - [ ] write bootloader for this (multiboot
+- [ ] read red zone (stack)
