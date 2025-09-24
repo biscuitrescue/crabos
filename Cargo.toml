@@ -9,5 +9,9 @@ panic = "abort"
 [profile.release]
 panic = "abort"
 
-[dependencies]
+[[bin]]
+name = "crabos"
+test = false
+bench = false
 
+[dependencies]
