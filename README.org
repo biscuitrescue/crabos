@@ -1,0 +1,9 @@
+#+title: Readme
+
+* CrabOS
+- A Minimal Kernel in rust
+
+** Plan
+- [ ] See if i can remove 16b to 32b to 64b
+- [ ] Bootloader stage optimisation
+- [ ] Make Multiboot compliant
