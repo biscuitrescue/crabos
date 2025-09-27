@@ -1,0 +1,41 @@
+#+title: Todo
+
+🔗Real Machine
+
+It is also possible to write it to a USB stick and boot it on a real machine, but be
+careful to choose the correct device name, because everything on that device
+is overwritten:
+
+> dd if=target/x86_64-blog_os/debug/bootimage-blog_os.bin of=/dev/sdX && sync
+
+Where sdX is the device name of your USB stick.
+
+After writing the image to the USB stick, you can run it on real hardware by
+booting from it. You probably need to use a special boot menu or change the
+boot order in your BIOS configuration to boot from the USB stick. Note that it
+currently doesn’t work for UEFI machines, since the bootloader crate has no
+UEFI support yet.
+
+🔗Using cargo run
+
+To make it easier to run our kernel in QEMU, we can set the runner
+configuration key for cargo:
+
+# in .cargo/config.toml
+
+[target.'cfg(target_os = "none")']
+runner = "bootimage runner"
+
+The target.'cfg(target_os = "none")' table applies to all targets whose
+target configuration file’s "os" field is set to "none". This includes our
+x86_64-blog_os.json target. The runner key specifies the command that
+should be invoked for cargo run. The command is run after a successful build
+with the executable path passed as the first argument. See the cargo
+documentation for more details.
+
+The bootimage runner command is specifically designed to be usable as a
+runner executable. It links the given executable with the project’s bootloader
+dependency and then launches QEMU. See the Readme of bootimage for more
+details and possible configuration options.
+
+Now we can use cargo run to compile our kernel and boot it in QEMU.
