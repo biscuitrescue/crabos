@@ -10,97 +10,124 @@ use volatile::Volatile;
 lazy_static! {
     pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
         column_position: 0,
-        color_code: ColorCode::new(Color::LightGreen, Color::Black), // rust's const evaluator can't convert raw pointers to refs at compile time
+        color_code: ColorCode::new(Color::LightGreen, Color::Black),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) }
     });
 }
 
-// testing mental gymnastics TODO
-// Simple approach: use a plain static array and cast it
+#[cfg(test)]
+struct SyncUnsafeCell<T>(core::cell::UnsafeCell<T>);
 
 #[cfg(test)]
-pub struct TestWriter {
-    column_position: usize,
-    color_code: ColorCode,
+unsafe impl<T> Sync for SyncUnsafeCell<T> {}
+
+#[cfg(test)]
+impl<T> SyncUnsafeCell<T> {
+    const fn new(value: T) -> Self {
+        SyncUnsafeCell(core::cell::UnsafeCell::new(value))
+    }
+    
+    fn get(&self) -> *mut T {
+        self.0.get()
+    }
 }
 
+// Allocate mem to fake vga buf
 #[cfg(test)]
 lazy_static! {
-    pub static ref TEST_BUF: Mutex<[[ScreenChar; BUFFER_WIDTH]; BUFFER_HEIGHT]> = {
-        Mutex::new([[ScreenChar {
-            ascii_character: b' ',
-            color_code: ColorCode::new(Color::LightGreen, Color::Black),
-        }; BUFFER_WIDTH]; BUFFER_HEIGHT])
-    };
-    pub static ref WRITER: Mutex<TestWriter> = Mutex::new(TestWriter {
+    static ref FAKE_VGA: SyncUnsafeCell<[u8; 4000]> = 
+        SyncUnsafeCell::new([0; 4000]); // 25*80*2 = 4000 bytes
+    
+    pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
         column_position: 0,
         color_code: ColorCode::new(Color::LightGreen, Color::Black),
+        buffer: unsafe { &mut *(FAKE_VGA.get() as *mut Buffer) },
     });
 }
 
-#[cfg(test)]
-impl TestWriter {
-    pub fn write_byte(&mut self, byte: u8) {
-        match byte {
-            b'\n' => self.new_line(),
-            byte => {
-                if self.column_position >= BUFFER_WIDTH {
-                    self.new_line();
-                }
-                
-                let row = BUFFER_HEIGHT - 1;
-                let col = self.column_position;
-                
-                // Write to test buffer
-                let mut buffer = TEST_BUF.lock();
-                buffer[row][col] = ScreenChar {
-                    ascii_character: byte,
-                    color_code: self.color_code,
-                };
-                
-                self.column_position += 1;
-            }
-        }
-    }
+// #[cfg(test)]
+// pub struct TestWriter {
+//     column_position: usize,
+//     color_code: ColorCode,
+// }
 
-    pub fn write_string(&mut self, s: &str) {
-        for byte in s.bytes() {
-            match byte {
-                0x20..=0x7e | b'\n' => self.write_byte(byte),
-                _ => self.write_byte(0xfe),
-            }
-        }
-    }
+// #[cfg(test)]
+// lazy_static! {
+//     pub static ref TEST_BUF: Mutex<[[ScreenChar; BUFFER_WIDTH]; BUFFER_HEIGHT]> = {
+//         Mutex::new([[ScreenChar {
+//             ascii_character: b' ',
+//             color_code: ColorCode::new(Color::LightGreen, Color::Black),
+//         }; BUFFER_WIDTH]; BUFFER_HEIGHT])
+//     };
+//     pub static ref WRITER: Mutex<TestWriter> = Mutex::new(TestWriter {
+//         column_position: 0,
+//         color_code: ColorCode::new(Color::LightGreen, Color::Black),
+//     });
+// }
 
-    fn new_line(&mut self) {
-        let mut buffer = TEST_BUF.lock();
-        
-        // Scroll up
-        for row in 1..BUFFER_HEIGHT {
-            for col in 0..BUFFER_WIDTH {
-                buffer[row - 1][col] = buffer[row][col];
-            }
-        }
-        
-        // Clear bottom row
-        for col in 0..BUFFER_WIDTH {
-            buffer[BUFFER_HEIGHT - 1][col] = ScreenChar {
-                ascii_character: b' ',
-                color_code: self.color_code,
-            };
-        }
-        
-        self.column_position = 0;
-    }
-}
+// #[cfg(test)]
+// impl TestWriter {
+//     pub fn write_byte(&mut self, byte: u8) {
+//         match byte {
+//             b'\n' => self.new_line(),
+//             byte => {
+//                 if self.column_position >= BUFFER_WIDTH {
+//                     self.new_line();
+//                 }
+                
+//                 let row = BUFFER_HEIGHT - 1;
+//                 let col = self.column_position;
+                
+//                 // Write to test buffer
+//                 let mut buffer = TEST_BUF.lock();
+//                 buffer[row][col] = ScreenChar {
+//                     ascii_character: byte,
+//                     color_code: self.color_code,
+//                 };
+                
+//                 self.column_position += 1;
+//             }
+//         }
+//     }
 
-#[cfg(test)]
-impl fmt::Write for TestWriter {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.write_string(s);
-        Ok(())
-    }
-}
+//     pub fn write_string(&mut self, s: &str) {
+//         for byte in s.bytes() {
+//             match byte {
+//                 0x20..=0x7e | b'\n' => self.write_byte(byte),
+//                 _ => self.write_byte(0xfe),
+//             }
+//         }
+//     }
+
+//     fn new_line(&mut self) {
+//         let mut buffer = TEST_BUF.lock();
+        
+//         // Scroll up
+//         for row in 1..BUFFER_HEIGHT {
+//             for col in 0..BUFFER_WIDTH {
+//                 buffer[row - 1][col] = buffer[row][col];
+//             }
+//         }
+        
+//         // Clear bottom row
+//         for col in 0..BUFFER_WIDTH {
+//             buffer[BUFFER_HEIGHT - 1][col] = ScreenChar {
+//                 ascii_character: b' ',
+//                 color_code: self.color_code,
+//             };
+//         }
+        
+//         self.column_position = 0;
+//     }
+// }
+
+// #[cfg(test)]
+// impl fmt::Write for TestWriter {
+//     fn write_str(&mut self, s: &str) -> fmt::Result {
+//         self.write_string(s);
+//         Ok(())
+//     }
+// }
 
 
 // #[cfg(test)]
