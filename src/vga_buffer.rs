@@ -3,6 +3,13 @@
 use volatile::Volatile;
 use core::fmt;
 
+// to provide global writer which can be used as interface from other modules
+pub static WRITER: Writer = Writer {
+    column_position: 0,
+    color_code: ColorCode::new(Color::LightGreen, Color::Black),
+    buffer: unsafe { &mut *(0xb8000 as *mut Buffer) }
+};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Color {
