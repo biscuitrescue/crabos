@@ -4,6 +4,10 @@
 - A Minimal Kernel in rust
 
 ** Plan
+- [x] Global Writer for vga_buffer
+- [x] println! + print!
+- [x] panic msg
+- [ ] Testing
 - [ ] See if i can remove 16b to 32b to 64b
 - [ ] Bootloader stage optimisation
 - [ ] Make Multiboot compliant
