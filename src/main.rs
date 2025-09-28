@@ -8,27 +8,51 @@ use core::panic::PanicInfo;
 mod vga_buffer;
 
 #[panic_handler]
-
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
+    
+    #[cfg(test)]
+    exit_qemu(QemuExitCode::Failed);
+    
     loop {}
 }
 
-#[unsafe(no_mangle)]
+#[unsafe(no_mangle)]  // Fixed the syntax
 pub extern "C" fn _start() -> ! {
     println!("CrabOS Supremacy{}", "!");
-
+    
     #[cfg(test)]
     test_main();
-
+    
     loop {}
 }
+
+#[cfg(test)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum QemuExitCode {
+    Success = 0x10,
+    Failed = 0x11,
+}
+
+#[cfg(test)]
+pub fn exit_qemu(exit_code: QemuExitCode) {
+    use x86_64::instructions::port::Port;
+    
+    unsafe {
+        let mut port = Port::new(0xf4);
+        port.write(exit_code as u32);
+    }
+}
+
 #[cfg(test)]
 pub fn test_runner(tests: &[&dyn Fn()]) {
     println!("Running {} tests", tests.len());
     for test in tests {
         test();
     }
+    println!("All tests passed!");
+    exit_qemu(QemuExitCode::Success);  // Exit QEMU after tests complete
 }
 
 #[test_case]
