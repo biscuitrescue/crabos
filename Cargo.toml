@@ -11,7 +11,7 @@ panic = "abort"
 
 [[bin]]
 name = "crabos"
-test = false
+test = true
 bench = false
 
 [dependencies]
