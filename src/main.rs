@@ -14,7 +14,7 @@ fn panic(_info: &PanicInfo) -> ! {
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     vga_buffer::WRITER.lock().write_str("CrabOS Supremacy").unwrap();
-    write!(vga_buffer::WRITER.lock(), "\n some numbers: {} {}", 42, 1.33).unwrap();
+    write!(vga_buffer::WRITER.lock(), "\nsome numbers: {} {}", 42, 1.33).unwrap();
 
     loop {}
 }
