@@ -8,13 +8,12 @@ mod vga_buffer;
 #[panic_handler]
 
 fn panic(_info: &PanicInfo) -> ! {
+
     loop {}
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
-    vga_buffer::WRITER.lock().write_str("CrabOS Supremacy").unwrap();
-    write!(vga_buffer::WRITER.lock(), "\nsome numbers: {} {}", 42, 1.33).unwrap();
-
+    println!("CrabOS Supremacy{}", "!");
     loop {}
 }
