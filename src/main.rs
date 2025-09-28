@@ -2,7 +2,6 @@
 #![no_main]
 
 use core::panic::PanicInfo;
-use core::fmt::Write;
 mod vga_buffer;
 
 #[panic_handler]
