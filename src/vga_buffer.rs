@@ -1,15 +1,18 @@
 #![allow(dead_code)]
 
-use volatile::Volatile;
 use core::fmt;
+use lazy_static::lazy_static;
+use spin::Mutex;
+use volatile::Volatile;
 
 // to provide global writer which can be used as interface from other modules
-pub static WRITER: Writer = Writer {
-    column_position: 0,
-    color_code: ColorCode::new(Color::LightGreen, Color::Black),
-    buffer: unsafe { &mut *(0xb8000 as *mut Buffer) }
-};
-
+lazy_static! {
+    pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
+        column_position: 0,
+        color_code: ColorCode::new(Color::LightGreen, Color::Black), // rust's const evaluator can't convert raw pointers to refs at compile time
+        buffer: unsafe { &mut *(0xb8000 as *mut Buffer) }
+    });
+}
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Color {
@@ -67,7 +70,9 @@ impl Writer {
         match byte {
             b'\n' => self.new_line(),
             byte => {
-                if self.column_position >= BUFFER_WIDTH { self.new_line(); }
+                if self.column_position >= BUFFER_WIDTH {
+                    self.new_line();
+                }
 
                 let row = BUFFER_HEIGHT - 1;
                 let col = self.column_position;
@@ -104,7 +109,7 @@ impl Writer {
         self.column_position = 0;
     }
 
-    fn clear_row(&mut self, row:usize) {
+    fn clear_row(&mut self, row: usize) {
         let blank = ScreenChar {
             ascii_character: b' ',
             color_code: self.color_code,
@@ -120,16 +125,4 @@ impl fmt::Write for Writer {
         self.write_string(s);
         Ok(())
     }
-}
-
-pub fn printsmth() {
-    let mut writer = Writer {
-        column_position: 0,
-        color_code: ColorCode::new(Color::Green, Color::Black),
-        buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    };
-
-    writer.write_byte(b'C');
-    writer.write_string("rabOS");
-    writer.write_string("Supremacy");
 }
