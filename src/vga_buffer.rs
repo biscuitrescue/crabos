@@ -6,6 +6,7 @@ use spin::Mutex;
 use volatile::Volatile;
 
 // to provide global writer which can be used as interface from other modules
+#[cfg(not(test))]
 lazy_static! {
     pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
         column_position: 0,
@@ -13,6 +14,25 @@ lazy_static! {
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) }
     });
 }
+
+// testing mental gymnastics TODO
+#[cfg(test)]
+lazy_static! {
+
+    static ref MOCK_BUFFER: Buffer = {
+        let mut buf = Buffer {
+            chars: [[Volatile::new(ScreenChar { ascii_character: 0, color_code: ColorCode(0) }); BUFFER_WIDTH]; BUFFER_HEIGHT],
+        };
+        buf
+    };
+    pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
+        column_position: 0,
+        color_code: ColorCode::new(Color::LightGreen, Color::Black),
+        buffer: &mut *(MOCK_BUFFER as *const _ as *mut Buffer), // cast to mutable
+    });
+}
+
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Color {
