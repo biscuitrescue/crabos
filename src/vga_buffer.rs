@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use core::fmt;
+use core::{ cell::UnsafeCell, fmt };
 use lazy_static::lazy_static;
 use spin::Mutex;
 use volatile::Volatile;
@@ -18,17 +18,29 @@ lazy_static! {
 // testing mental gymnastics TODO
 #[cfg(test)]
 lazy_static! {
-
     static ref MOCK_BUFFER: Buffer = {
-        let mut buf = Buffer {
-            chars: [[Volatile::new(ScreenChar { ascii_character: 0, color_code: ColorCode(0) }); BUFFER_WIDTH]; BUFFER_HEIGHT],
-        };
-        buf
+        use core::mem::MaybeUninit;
+        let mut buf: MaybeUninit<Buffer> = MaybeUninit::uninit();
+
+        unsafe {
+            let buf_ptr = buf.as_mut_ptr();
+            for row in 0..BUFFER_HEIGHT {
+                for col in 0..BUFFER_WIDTH {
+                    let ch_ptr = &mut (*buf_ptr).chars[row][col] as *mut Volatile<ScreenChar>;
+                    ch_ptr.write(Volatile::new(ScreenChar {
+                        ascii_character: b' ',
+                        color_code: ColorCode(0),
+                    }));
+                }
+            }
+            buf.assume_init()
+        }
     };
+
     pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
         column_position: 0,
         color_code: ColorCode::new(Color::LightGreen, Color::Black),
-        buffer: &mut *(MOCK_BUFFER as *const _ as *mut Buffer), // cast to mutable
+        buffer: unsafe { &mut *(&MOCK_BUFFER as *const _ as *mut Buffer) }, // cast to mutable
     });
 }
 
