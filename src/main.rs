@@ -17,7 +17,7 @@ fn panic(info: &PanicInfo) -> ! {
     loop {}
 }
 
-#[unsafe(no_mangle)]  // Fixed the syntax
+#[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("CrabOS Supremacy{}", "!");
     
